@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 import Image from "next/image";
 import { Search, MapPin, Ticket, Music2 } from "lucide-react";
@@ -79,8 +79,16 @@ export default function Home() {
       setFetchError(null);
 
       const params = new URLSearchParams();
-      if (search) params.set("keyword", search);
-      if (location) params.set("city", location);
+      if (search.length >= 3) {
+        params.set("keyword", search);
+      }
+      if (location) {
+        if (/^[a-z]{2}$/i.test(location)) {
+          params.set("stateCode", location.toUpperCase());
+        } else {
+          params.set("city", location);
+        }
+      }
 
       try {
         const res = await fetch(`/api/concerts?${params.toString()}`, {
@@ -135,12 +143,30 @@ export default function Home() {
     ),
   ];
 
-  const filtered = events.filter((e) => {
-    const matchGenre = activeGenre === "All" || e.genre === activeGenre;
-    const matchSubGenre =
-      activeSubGenre === "All" || e.subGenre === activeSubGenre;
-    return matchGenre && matchSubGenre;
-  });
+  const filtered = useMemo(() => {
+    return events.filter((e) => {
+      const matchGenre = activeGenre === "All" || e.genre === activeGenre;
+      const matchSubGenre = activeSubGenre === "All" || e.subGenre === activeSubGenre;
+      const q = search.trim().toLowerCase();
+
+      const searchableText = [
+        e.artist,
+        e.venue,
+        e.city,
+        e.state,
+        e.genre,
+        e.subGenre,
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      const matchSearch =
+        !q || searchableText.includes(q);
+      const loc = location.toLowerCase().trim();
+      const matchLocation = !loc || e.city.toLowerCase().includes(loc) || e.state.toLowerCase().includes(loc);
+      return matchGenre && matchSubGenre && matchLocation && matchSearch
+    })
+  }, [events, search, location, activeGenre, activeSubGenre])
 
   const currentYear = new Date().getFullYear();
 
@@ -227,7 +253,7 @@ export default function Home() {
               <input
                 type="text"
                 name="location"
-                placeholder="City or country"
+                placeholder="City or state"
                 value={locationInput}
                 onChange={(e) => setLocationInput(e.target.value)}
                 onKeyDown={handleSearch}
@@ -306,7 +332,6 @@ export default function Home() {
           )}
 
           {/* Results header */}
-
           <div className="flex items-baseline justify-between mb-6">
             <h2
               className="text-lg font-bold text-foreground"

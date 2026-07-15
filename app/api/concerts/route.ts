@@ -11,8 +11,22 @@ import { searchConcerts, TicketmasterApiError } from "@/lib/ticketmaster";
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
 
-  const city = searchParams.get("city") ?? undefined;
-  const stateCode = searchParams.get("stateCode") ?? undefined;
+  function normalizeCity(city: string) {
+    return city
+      .trim()
+      .toLowerCase()
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  function normalizeStateCode(state: string) {
+    return state.trim().toUpperCase();
+  }
+
+  const cityParam = searchParams.get("city");
+  const stateCodeParam = searchParams.get("stateCode");
+
+  const city = cityParam ? normalizeCity(cityParam) : undefined;
+  const stateCode = stateCodeParam ? normalizeStateCode(stateCodeParam) : undefined;
   const postalCode = searchParams.get("postalCode") ?? undefined;
   const keyword = searchParams.get("keyword") ?? undefined;
   const startDateTime = searchParams.get("startDateTime") ?? undefined;
