@@ -205,21 +205,38 @@ export default function Home() {
     }, 600)
   };
 
-  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleSearch = (e: React.SyntheticEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    const formData = new FormData(e.currentTarget);
+
+    const query = String(formData.get("search") ?? "").trim();
+    const loc = String(formData.get("location") ?? "").trim();
+
+    setSearchInput(query);
+    setLocationInput(loc);
+
+    setSearch(query);
+    setLocation(loc);
+
+    setHasSearched(true);
+    setVisibleCount(initialLimit);
+
+    const matchedGenre = genres.find(
+      (genre) => 
+        genre !== "All" &&
+        query.toLowerCase().includes(genre.toLowerCase()),
+    );
+
+    setActiveGenre(matchedGenre ?? "All");
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      const query = searchInput.trim();
+      e.preventDefault();
 
-      setSearch(query);
-      setLocation(locationInput.trim());
-      setHasSearched(true);
-      setVisibleCount(initialLimit);
-
-      const matchedGenre = genres.find(
-        (genre) =>
-          genre !== "All" && query.toLowerCase().includes(genre.toLowerCase()),
-      );
-
-      setActiveGenre(matchedGenre ?? "All");
+      const form = e.currentTarget.form;
+      form?.requestSubmit();
     }
   };
 
@@ -262,7 +279,11 @@ export default function Home() {
           </div>
 
           {/* Search bar */}
-          <div className="flex flex-1 items-center gap-2 max-w-2xl ml-auto">
+          <form 
+            className="flex flex-1 items-center gap-2 max-w-2xl ml-auto"
+            autoComplete="off"
+            onSubmit={handleSearch}
+            >
             <div className="flex-1 flex items-center gap-2 bg-muted rounded-lg px-3 py-2 border border-border focus-within:border-primary/50 transition-colors">
               <Search size={15} className="text-muted-foreground shrink-0" />
               <input
@@ -271,7 +292,7 @@ export default function Home() {
                 placeholder="Artist, venue, event, or genre..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                onKeyDown={handleSearch}
+                onKeyDown={handleSearchKeyDown}
                 className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none w-full truncate"
               />
             </div>
@@ -283,11 +304,11 @@ export default function Home() {
                 placeholder="City or state"
                 value={locationInput}
                 onChange={(e) => setLocationInput(e.target.value)}
-                onKeyDown={handleSearch}
+                onKeyDown={handleSearchKeyDown}
                 className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none w-full truncate"
               />
             </div>
-          </div>
+          </form>
         </div>
       </header>
 
