@@ -83,6 +83,7 @@ export default function Home() {
   const [location, setLocation] = useState("");
   const [activeGenre, setActiveGenre] = useState("All");
   const [hasSearched, setHasSearched] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const [events, setEvents] = useState<CardEvent[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<CardEvent | null>(null);
@@ -196,7 +197,12 @@ export default function Home() {
   );
 
   const handleLoadMore = () => {
-    setVisibleCount((prevCount) => prevCount + itemsPerLoad);
+    setIsLoadingMore(true);
+
+    setTimeout(() => {
+      setVisibleCount((prevCount) => prevCount + itemsPerLoad);
+      setIsLoadingMore(false);
+    }, 600)
   };
 
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -387,6 +393,11 @@ export default function Home() {
                     onTicketClick={handleTicketClick}
                   />
                 ))}
+
+                {isLoadingMore &&
+                  Array.from({ length: itemsPerLoad }).map((_, index) => (
+                    <EventCardSkeleton key={`skeleton-${index}`} />
+                  ))}
               </ul>
               {visibleCount < filtered.length && (
                 <div className="mt-6 flex justify-center">
@@ -395,7 +406,7 @@ export default function Home() {
                     onClick={handleLoadMore}
                     className="text-sm px-6 py-2.5 md:px-8 md:py-3 lg:px-10 rounded-full border bg-muted border-primary/40 text-foreground transition-all font-medium cursor-pointer hover:bg-primary hover:border-primary"
                   >
-                    Show more
+                    {isLoadingMore ? "Loading..." : "Show more"}
                   </button>
                 </div>
               )}
