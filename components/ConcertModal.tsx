@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { X, MapPin, Calendar, Clock, Ticket, ExternalLink } from "lucide-react";
+import { X, MapPin, Calendar, Clock, Ticket } from "lucide-react";
 
 import type { NormalizedArtistBio } from "@/lib/lastfm";
 import type { NormalizedSpotifyArtist } from "@/lib/spotify";
 import type { NormalizedAppleMusicArtist } from "@/lib/apple-music";
+import StreamingServiceLinks from "@/components/StreamingServiceLinks";
 
 /** Matches the CardEvent shape rendered by EventCard in app/page.tsx. */
 export type ConcertModalEvent = {
@@ -231,18 +232,17 @@ export default function ConcertModal({
             <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-2">
               Listen &amp; Follow
             </h3>
-            <div className="flex flex-wrap gap-2">
-              <StreamingLink
-                label="Spotify"
-                isLoading={spotify.isLoading}
-                url={spotify.data?.url ?? null}
-              />
-              <StreamingLink
-                label="Apple Music"
-                isLoading={appleMusic.isLoading}
-                url={appleMusic.data?.url ?? null}
-              />
-            </div>
+            <StreamingServiceLinks
+              artistName={event.artist}
+              appleMusic={{
+                isLoading: appleMusic.isLoading,
+                url: appleMusic.data?.url ?? null,
+              }}
+              spotify={{
+                isLoading: spotify.isLoading,
+                url: spotify.data?.url ?? null,
+              }}
+            />
             {spotify.data?.genres && spotify.data.genres.length > 0 && (
               <p
                 className="mt-3 text-xs text-muted-foreground"
@@ -258,43 +258,6 @@ export default function ConcertModal({
   );
 }
 
-function StreamingLink({
-  label,
-  url,
-  isLoading,
-}: {
-  label: string;
-  url: string | null;
-  isLoading: boolean;
-}) {
-  if (isLoading) {
-    return (
-      <span className="text-xs px-3 py-1.5 rounded-lg border border-border bg-muted text-muted-foreground">
-        {label}...
-      </span>
-    );
-  }
-
-  if (!url) {
-    return (
-      <span className="text-xs px-3 py-1.5 rounded-lg border border-border bg-muted text-muted-foreground opacity-50">
-        {label} unavailable
-      </span>
-    );
-  }
-
-  return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noreferrer"
-      className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-primary/20 bg-primary/10 hover:bg-primary/20 hover:border-primary/40 text-primary transition-all cursor-pointer"
-    >
-      {label}
-      <ExternalLink size={11} />
-    </a>
-  );
-}
 
 async function fetchArtistData<T>(
   url: string,
