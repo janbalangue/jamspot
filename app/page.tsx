@@ -6,6 +6,10 @@ import Image from "next/image";
 import { Search, MapPin, Ticket, Music2, Calendar, Clock, X } from "lucide-react";
 
 import type { NormalizedConcert } from "@/lib/ticketmaster";
+import type { NormalizedArtistBio } from "@/lib/lastfm";
+import type { NormalizedSpotifyArtist } from "@/lib/spotify";
+import type { NormalizedAppleMusicArtist } from "@/lib/apple-music";
+import StreamingServiceLinks from "@/components/StreamingServiceLinks";
 
 const FALLBACK_IMAGE = "https://picsum.photos/400/250?random=1";
 
@@ -21,7 +25,6 @@ type CardEvent = {
   genre: string;
   priceRange: string | null;
   image: string;
-  description?: string;
   ticketUrl: string | null;
 };
 
@@ -460,10 +463,16 @@ export default function Home() {
       </footer>
 
       {/* Modal */}
-      <EventDetailsModal
-        event={selectedEvent}
-        onClose={() => setSelectedEvent(null)}
-      />
+      {/* Mounted only while an event is selected, and keyed by event id, so
+          React tears down and re-creates the modal (resetting the Last.fm
+          bio state back to "loading") whenever a different artist is opened. */}
+      {selectedEvent && (
+        <EventDetailsModal
+          key={selectedEvent.id}
+          event={selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+        />
+      )}
     </div>
   );
 }
@@ -592,15 +601,81 @@ function EventCardSkeleton() {
 }
 
 interface EventDetailsModalProps {
-  event: CardEvent | null;
+  event: CardEvent;
   onClose: () => void;
 }
+
+type FetchState<T> = {
+  data: T | null;
+  isLoading: boolean;
+  error: string | null;
+};
+
+const initialFetchState = <T,>(): FetchState<T> => ({
+  data: null,
+  isLoading: true,
+  error: null,
+});
 
 function EventDetailsModal ({
   event,
   onClose,
 } : EventDetailsModalProps) {
-  if (!event) return null;
+  // TEA-22: Last.fm artist biography.
+  const [bio, setBio] = useState<FetchState<NormalizedArtistBio>>(
+    initialFetchState,
+  );
+  // TEA-19 / TEA-23: Spotify artist link.
+  const [spotify, setSpotify] = useState<FetchState<NormalizedSpotifyArtist>>(
+    initialFetchState,
+  );
+  // TEA-21 / TEA-24: Apple Music artist link.
+  const [appleMusic, setAppleMusic] = useState<
+    FetchState<NormalizedAppleMusicArtist>
+  >(initialFetchState);
+
+  const artistName = event.artist;
+
+  // All three go through our own API routes so provider credentials never
+  // reach the browser. They're fired independently and tracked in separate
+  // state, so one provider being down or rate-limited never blocks the
+  // others from rendering.
+  useEffect(() => {
+    const controller = new AbortController();
+    const query = `name=${encodeURIComponent(artistName)}`;
+
+    loadArtistData<{ bio: NormalizedArtistBio | null }, NormalizedArtistBio>(
+      `/api/artist/lastfm?${query}`,
+      controller.signal,
+      (res) => res.bio ?? null,
+      setBio,
+      "Failed to load artist bio",
+    );
+
+    loadArtistData<
+      { artist: NormalizedSpotifyArtist | null },
+      NormalizedSpotifyArtist
+    >(
+      `/api/artist/spotify?${query}`,
+      controller.signal,
+      (res) => res.artist ?? null,
+      setSpotify,
+      "Failed to load Spotify artist",
+    );
+
+    loadArtistData<
+      { artist: NormalizedAppleMusicArtist | null },
+      NormalizedAppleMusicArtist
+    >(
+      `/api/artist/apple-music?${query}`,
+      controller.signal,
+      (res) => res.artist ?? null,
+      setAppleMusic,
+      "Failed to load Apple Music artist",
+    );
+
+    return () => controller.abort();
+  }, [artistName]);
 
   return (
     <div
@@ -678,20 +753,57 @@ function EventDetailsModal ({
             <p className="mt-1 font-semibold">{event.priceRange}</p>
           </div>
 
-          {event.description && (
-            <div className="border-t border-border pt-4">
-              <p
-                className="mb-2 text-xs uppercase text-muted-foreground"
-                style={{ fontFamily: "'DM Mono', monospace" }}
-              >
-                About
-              </p>
+          {/* TEA-22: Last.fm artist summary */}
+          <div className="border-t border-border pt-4">
+            <p
+              className="mb-2 text-xs uppercase text-muted-foreground"
+              style={{ fontFamily: "'DM Mono', monospace" }}
+            >
+              About {event.artist}
+            </p>
 
+            {bio.isLoading ? (
+              <div className="space-y-2" aria-hidden="true">
+                <div className="h-3 w-full rounded bg-muted animate-pulse" />
+                <div className="h-3 w-full rounded bg-muted animate-pulse" />
+                <div className="h-3 w-2/3 rounded bg-muted animate-pulse" />
+              </div>
+            ) : bio.error ? (
               <p className="text-sm leading-6 text-muted-foreground">
-                {event.description}
+                Bio unavailable right now.
               </p>
-            </div>
-          )}
+            ) : bio.data?.summary ? (
+              <p className="text-sm leading-6 text-muted-foreground">
+                {bio.data.summary}
+              </p>
+            ) : (
+              <p className="text-sm leading-6 text-muted-foreground">
+                No biography found for this artist.
+              </p>
+            )}
+          </div>
+
+          {/* TEA-19/21/23/24: streaming links */}
+          <div className="border-t border-border pt-4">
+            <p
+              className="mb-2 text-xs uppercase text-muted-foreground"
+              style={{ fontFamily: "'DM Mono', monospace" }}
+            >
+              Listen
+            </p>
+
+            <StreamingServiceLinks
+              artistName={artistName}
+              appleMusic={{
+                isLoading: appleMusic.isLoading,
+                url: appleMusic.data?.url ?? null,
+              }}
+              spotify={{
+                isLoading: spotify.isLoading,
+                url: spotify.data?.url ?? null,
+              }}
+            />
+          </div>
 
           {event.ticketUrl && (
             <a
@@ -708,4 +820,42 @@ function EventDetailsModal ({
       </div>
     </div>
   )
+}
+
+/**
+ * Fire one artist-enrichment request and funnel the outcome into `setState`.
+ * Aborts are swallowed on purpose: the only time we abort is on unmount or an
+ * artist change, and writing state then would flash an empty result before the
+ * replacement request lands.
+ */
+function loadArtistData<Res, Data>(
+  url: string,
+  signal: AbortSignal,
+  select: (res: Res) => Data | null,
+  setState: (state: FetchState<Data>) => void,
+  fallbackError: string,
+) {
+  fetchArtistData<Res>(url, signal)
+    .then((res) =>
+      setState({ data: select(res), isLoading: false, error: null }),
+    )
+    .catch((err) => {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      setState({
+        data: null,
+        isLoading: false,
+        error: err instanceof Error ? err.message : fallbackError,
+      });
+    });
+}
+
+async function fetchArtistData<T>(url: string, signal: AbortSignal): Promise<T> {
+  const res = await fetch(url, { signal });
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data?.error ?? "Request failed");
+  }
+
+  return data as T;
 }
