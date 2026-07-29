@@ -182,6 +182,18 @@ export default function Home() {
   const currentYear = new Date().getFullYear();
 
   const visibleCards = filtered.slice(0, visibleCount);
+  const completeCardEvents = visibleCards.filter(
+    (event) =>
+      event.id &&
+      event.artist &&
+      event.venue &&
+      event.city &&
+      event.state &&
+      event.date &&
+      event.time &&
+      event.genre &&
+      event.image
+  );
 
   const handleLoadMore = () => {
     setVisibleCount((prevCount) => prevCount + itemsPerLoad);
@@ -341,9 +353,11 @@ export default function Home() {
 
           {/* Events grid */}
           {isLoading ? (
-            <div className="text-center py-24">
-              <p className="text-muted-foreground">Loading shows...</p>
-            </div>
+            <ul className="grid w-full grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <EventCardSkeleton key={index} />
+              ))}
+            </ul>
           ) : fetchError ? (
             <div className="text-center py-24">
               <Music2
@@ -365,7 +379,7 @@ export default function Home() {
           ) : (
             <div className="flex flex-col">
               <ul className="grid w-full grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {visibleCards.map((event) => (
+                {completeCardEvents.map((event) => (
                   <EventCard
                     key={event.id}
                     event={event}
@@ -518,6 +532,31 @@ function EventCard({
       </div>
     </li>
   );
+}
+
+function EventCardSkeleton() {
+  return (
+    <li className="overflow-hidden rounded-xl bg-card border border-border">
+      {/* Image skeleton */}
+      <div className="h-44 bg-muted animate-pulse" />
+
+      {/* Card body skeleton */}
+      <div className="p-4 space-y-4">
+        {/* Artist */}
+        <div className="h-4 w-3/4 rounded bg-muted animate-pulse" />
+
+        {/* Venue */}
+        <div className="h-3 w-full rounded bg-muted animate-pulse" />
+        <div className="h-3 w-2/3 rounded bg-muted animate-pulse" />
+
+        {/* Bottom row */}
+        <div className="flex items-center justify-between pt-2">
+          <div className="h-4 w-20 rounded bg-muted animate-pulse" />
+          <div className="h-8 w-28 rounded-lg bg-muted animate-pulse" />
+        </div>
+      </div>
+    </li>
+  )
 }
 
 interface EventDetailsModalProps {
