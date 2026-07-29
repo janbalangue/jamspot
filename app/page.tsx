@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 
 import Image from "next/image";
-import { Search, MapPin, Ticket, Music2 } from "lucide-react";
+import { Search, MapPin, Ticket, Music2, Calendar, Clock, X } from "lucide-react";
 
 import type { NormalizedConcert } from "@/lib/ticketmaster";
 
@@ -19,9 +19,9 @@ type CardEvent = {
   date: string;
   time: string;
   genre: string;
-  subGenre: string;
   priceRange: string | null;
   image: string;
+  description?: string;
   ticketUrl: string | null;
 };
 
@@ -35,6 +35,31 @@ function formatPriceRange(
   return `${symbol}${min} - ${symbol}${max}`;
 }
 
+function formatDate(date: string | null | undefined): string {
+  if (!date) return "Date TBA";
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date(date));
+}
+
+function formatTime(time: string | null | undefined): string {
+  if (!time) return "Time TBA";
+
+  const [hours, minutes] = time.split(":").map(Number);
+
+  const date = new Date();
+  date.setHours(hours,minutes);
+
+  return new Intl.DateTimeFormat("en-US", {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).format(date)
+}
+
 function toCardEvent(concert: NormalizedConcert): CardEvent {
   return {
     id: concert.id,
@@ -42,10 +67,9 @@ function toCardEvent(concert: NormalizedConcert): CardEvent {
     venue: concert.venue ?? "Venue TBA",
     city: concert.city ?? "",
     state: concert.state ?? "",
-    date: concert.date ?? "Date TBA",
-    time: concert.time ?? "",
+    date: formatDate(concert.date),
+    time: formatTime(concert.time),
     genre: concert.genre ?? "Other",
-    subGenre: concert.subGenre ?? "Other",
     priceRange: formatPriceRange(concert.priceRange),
     image: concert.imageUrl ?? FALLBACK_IMAGE,
     ticketUrl: concert.ticketUrl,
@@ -58,10 +82,11 @@ export default function Home() {
   const [locationInput, setLocationInput] = useState("");
   const [location, setLocation] = useState("");
   const [activeGenre, setActiveGenre] = useState("All");
-  const [activeSubGenre, setActiveSubGenre] = useState("All");
   const [hasSearched, setHasSearched] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const [events, setEvents] = useState<CardEvent[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<CardEvent | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
@@ -132,21 +157,9 @@ export default function Home() {
     ...new Set(events.map((e) => e.genre).filter(Boolean)),
   ];
 
-  // Sub-genres available for the currently selected genre.
-  const subGenres = [
-    "All",
-    ...new Set(
-      events
-        .filter((e) => activeGenre === "All" || e.genre === activeGenre)
-        .map((e) => e.subGenre)
-        .filter(Boolean),
-    ),
-  ];
-
   const filtered = useMemo(() => {
     return events.filter((e) => {
       const matchGenre = activeGenre === "All" || e.genre === activeGenre;
-      const matchSubGenre = activeSubGenre === "All" || e.subGenre === activeSubGenre;
       const q = search.trim().toLowerCase();
 
       const searchableText = [
@@ -155,7 +168,6 @@ export default function Home() {
         e.city,
         e.state,
         e.genre,
-        e.subGenre,
       ]
         .join(' ')
         .toLowerCase();
@@ -164,46 +176,78 @@ export default function Home() {
         !q || searchableText.includes(q);
       const loc = location.toLowerCase().trim();
       const matchLocation = !loc || e.city.toLowerCase().includes(loc) || e.state.toLowerCase().includes(loc);
-      return matchGenre && matchSubGenre && matchLocation && matchSearch
+      return matchGenre && matchLocation && matchSearch
     })
-  }, [events, search, location, activeGenre, activeSubGenre])
+  }, [events, search, location, activeGenre])
 
   const currentYear = new Date().getFullYear();
 
   const visibleCards = filtered.slice(0, visibleCount);
+  const completeCardEvents = visibleCards.filter(
+    (event) =>
+      event.id &&
+      event.artist &&
+      event.venue &&
+      event.city &&
+      event.state &&
+      event.date &&
+      event.time &&
+      event.genre &&
+      event.image
+  );
 
   const handleLoadMore = () => {
-    setVisibleCount((prevCount) => prevCount + itemsPerLoad);
+    setIsLoadingMore(true);
+
+    setTimeout(() => {
+      setVisibleCount((prevCount) => prevCount + itemsPerLoad);
+      setIsLoadingMore(false);
+    }, 600)
   };
 
-  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleSearch = (e: React.SyntheticEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    const formData = new FormData(e.currentTarget);
+
+    const query = String(formData.get("search") ?? "").trim();
+    const loc = String(formData.get("location") ?? "").trim();
+
+    setSearchInput(query);
+    setLocationInput(loc);
+
+    setSearch(query);
+    setLocation(loc);
+
+    setHasSearched(true);
+    setVisibleCount(initialLimit);
+
+    const matchedGenre = genres.find(
+      (genre) => 
+        genre !== "All" &&
+        query.toLowerCase().includes(genre.toLowerCase()),
+    );
+
+    setActiveGenre(matchedGenre ?? "All");
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      const query = searchInput.trim();
+      e.preventDefault();
 
-      setSearch(query);
-      setLocation(locationInput.trim());
-      setHasSearched(true);
-      setVisibleCount(initialLimit);
-
-      const matchedGenre = genres.find(
-        (genre) =>
-          genre !== "All" && query.toLowerCase().includes(genre.toLowerCase()),
-      );
-
-      setActiveGenre(matchedGenre ?? "All");
+      const form = e.currentTarget.form;
+      form?.requestSubmit();
     }
   };
 
   const handleGenreClick = (g: string) => {
     setActiveGenre(g);
-    setActiveSubGenre("All");
     setVisibleCount(initialLimit);
   };
 
-  const handleSubGenreClick = (sg: string) => {
-    setActiveSubGenre(sg);
-    setVisibleCount(initialLimit);
-  };
+  const handleModalOpen = (event: CardEvent) => {
+    setSelectedEvent(event);
+  }
 
   const handleTicketClick = (event: CardEvent) => {
     if (!event.ticketUrl) return;
@@ -235,7 +279,11 @@ export default function Home() {
           </div>
 
           {/* Search bar */}
-          <div className="flex flex-1 items-center gap-2 max-w-2xl ml-auto">
+          <form 
+            className="flex flex-1 items-center gap-2 max-w-2xl ml-auto"
+            autoComplete="off"
+            onSubmit={handleSearch}
+            >
             <div className="flex-1 flex items-center gap-2 bg-muted rounded-lg px-3 py-2 border border-border focus-within:border-primary/50 transition-colors">
               <Search size={15} className="text-muted-foreground shrink-0" />
               <input
@@ -244,7 +292,7 @@ export default function Home() {
                 placeholder="Artist, venue, event, or genre..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                onKeyDown={handleSearch}
+                onKeyDown={handleSearchKeyDown}
                 className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none w-full truncate"
               />
             </div>
@@ -256,11 +304,11 @@ export default function Home() {
                 placeholder="City or state"
                 value={locationInput}
                 onChange={(e) => setLocationInput(e.target.value)}
-                onKeyDown={handleSearch}
+                onKeyDown={handleSearchKeyDown}
                 className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none w-full truncate"
               />
             </div>
-          </div>
+          </form>
         </div>
       </header>
 
@@ -311,26 +359,6 @@ export default function Home() {
             ))}
           </div>
 
-          {/* Sub-genre chips */}
-          {subGenres.length > 1 && (
-            <div className="flex gap-2 flex-wrap mb-8">
-              {subGenres.map((sg) => (
-                <button
-                  key={sg}
-                  onClick={() => handleSubGenreClick(sg)}
-                  className={`text-xs px-4 py-1.5 rounded-full border transition-all font-medium cursor-pointer ${
-                    activeSubGenre === sg
-                      ? "bg-primary/70 border-primary/70 text-white"
-                      : "bg-muted border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
-                  }`}
-                  style={{ fontFamily: "'DM Mono', monospace" }}
-                >
-                  {sg}
-                </button>
-              ))}
-            </div>
-          )}
-
           {/* Results header */}
           <div className="flex items-baseline justify-between mb-6">
             <h2
@@ -352,9 +380,11 @@ export default function Home() {
 
           {/* Events grid */}
           {isLoading ? (
-            <div className="text-center py-24">
-              <p className="text-muted-foreground">Loading shows...</p>
-            </div>
+            <ul className="grid w-full grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <EventCardSkeleton key={index} />
+              ))}
+            </ul>
           ) : fetchError ? (
             <div className="text-center py-24">
               <Music2
@@ -376,13 +406,19 @@ export default function Home() {
           ) : (
             <div className="flex flex-col">
               <ul className="grid w-full grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {visibleCards.map((event) => (
+                {completeCardEvents.map((event) => (
                   <EventCard
                     key={event.id}
                     event={event}
+                    onOpen={handleModalOpen}
                     onTicketClick={handleTicketClick}
                   />
                 ))}
+
+                {isLoadingMore &&
+                  Array.from({ length: itemsPerLoad }).map((_, index) => (
+                    <EventCardSkeleton key={`skeleton-${index}`} />
+                  ))}
               </ul>
               {visibleCount < filtered.length && (
                 <div className="mt-6 flex justify-center">
@@ -391,7 +427,7 @@ export default function Home() {
                     onClick={handleLoadMore}
                     className="text-sm px-6 py-2.5 md:px-8 md:py-3 lg:px-10 rounded-full border bg-muted border-primary/40 text-foreground transition-all font-medium cursor-pointer hover:bg-primary hover:border-primary"
                   >
-                    Show more
+                    {isLoadingMore ? "Loading..." : "Show more"}
                   </button>
                 </div>
               )}
@@ -422,19 +458,30 @@ export default function Home() {
           </p>
         </div>
       </footer>
+
+      {/* Modal */}
+      <EventDetailsModal
+        event={selectedEvent}
+        onClose={() => setSelectedEvent(null)}
+      />
     </div>
   );
 }
 
 function EventCard({
   event,
+  onOpen,
   onTicketClick,
 }: {
   event: CardEvent;
+  onOpen: (event: CardEvent) => void;
   onTicketClick: (event: CardEvent) => void;
 }) {
   return (
-    <li className="group  relative overflow-hidden rounded-xl bg-card border border-border hover:border-primary/30 transition-all hover:-translate-y-0.5 duration-200">
+    <li
+      onClick={() => onOpen(event)} 
+      className="group relative overflow-hidden rounded-xl bg-card border border-border hover:border-primary/30 transition-all hover:-translate-y-0.5 duration-200 cursor-pointer"
+    >
       {/* Image */}
       <div className="relative h-44 overflow-hidden bg-muted">
         <Image
@@ -500,7 +547,10 @@ function EventCard({
             {event.priceRange}
           </span>
           <button
-            onClick={() => onTicketClick(event)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onTicketClick(event);
+            }}
             disabled={!event.ticketUrl}
             className="
                 flex items-center gap-1.5 text-xs bg-primary/10 hover:bg-primary/20 border border-primary/20 hover:border-primary/40 
@@ -514,4 +564,148 @@ function EventCard({
       </div>
     </li>
   );
+}
+
+function EventCardSkeleton() {
+  return (
+    <li className="overflow-hidden rounded-xl bg-card border border-border">
+      {/* Image skeleton */}
+      <div className="h-44 bg-muted animate-pulse" />
+
+      {/* Card body skeleton */}
+      <div className="p-4 space-y-4">
+        {/* Artist */}
+        <div className="h-4 w-3/4 rounded bg-muted animate-pulse" />
+
+        {/* Venue */}
+        <div className="h-3 w-full rounded bg-muted animate-pulse" />
+        <div className="h-3 w-2/3 rounded bg-muted animate-pulse" />
+
+        {/* Bottom row */}
+        <div className="flex items-center justify-between pt-2">
+          <div className="h-4 w-20 rounded bg-muted animate-pulse" />
+          <div className="h-8 w-28 rounded-lg bg-muted animate-pulse" />
+        </div>
+      </div>
+    </li>
+  )
+}
+
+interface EventDetailsModalProps {
+  event: CardEvent | null;
+  onClose: () => void;
+}
+
+function EventDetailsModal ({
+  event,
+  onClose,
+} : EventDetailsModalProps) {
+  if (!event) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 cursor-pointer"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-border bg-card shadow-xl cursor-default"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close */}
+        <button
+          className="absolute right-3 top-3 z-10 rounded-full bg-black/50 p-2 text-white hover:bg-black/70 cursor-pointer"
+          onClick={onClose}
+        >
+          <X size={18} />
+        </button>
+
+        {/* Image */}
+        <div className="relative h-56">
+          <Image 
+            src={event.image}
+            alt={event.artist}
+            fill
+            className="object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-card via-card/30 to-transparent" />
+
+          <div className="absolute bottom-4 left-4">
+            <span
+              className="rounded bg-black/60 px-2 py-1 text-xs text-white"
+              style={{ fontFamily: "'DM Mono', monospace" }}
+            >
+              {event.genre}
+            </span>
+
+            <h2
+              className="mt-2 text-2xl font-black text-white"
+              style={{ fontFamily: "'Unbounded', sans-serif" }}
+            >
+              {event.artist}
+            </h2>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="space-y-4 p-6">
+          <div className="flex items-center gap-2 text-sm">
+            <Calendar size={16} className="text-primary" />
+            <span>{event.date}</span>
+          </div>
+
+          <div className="flex items-center gap-2 text-sm">
+            <Clock size={16} className="text-primary" />
+            <span>{event.time}</span>
+          </div>
+
+          <div className="flex items-center gap-2 text-sm">
+            <MapPin size={16} className="mt-0.5 text-primary" />
+            <span>
+              {event.venue}
+              <br />
+              {event.city}, {event.state}
+            </span>
+          </div>
+
+          <div className="border-t border-border pt-4">
+            <p
+              className="text-xs uppercase text-muted-foreground"
+              style={{ fontFamily: "'DM Mono', monospace" }}
+            >
+              Price
+            </p>
+
+            <p className="mt-1 font-semibold">{event.priceRange}</p>
+          </div>
+
+          {event.description && (
+            <div className="border-t border-border pt-4">
+              <p
+                className="mb-2 text-xs uppercase text-muted-foreground"
+                style={{ fontFamily: "'DM Mono', monospace" }}
+              >
+                About
+              </p>
+
+              <p className="text-sm leading-6 text-muted-foreground">
+                {event.description}
+              </p>
+            </div>
+          )}
+
+          {event.ticketUrl && (
+            <a
+              href={event.ticketUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground hover:opacity-90"
+            >
+              <Ticket size={16} />
+              Get Tickets
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  )
 }
