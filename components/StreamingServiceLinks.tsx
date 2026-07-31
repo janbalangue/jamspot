@@ -20,7 +20,7 @@ export default function StreamingServiceLinks({
   appleMusic,
 }: StreamingServiceLinksProps) {
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="flex items-center gap-3">
       <AppleMusicLink artistName={artistName} {...appleMusic} />
       <SpotifyLink artistName={artistName} {...spotify} />
     </div>
@@ -78,20 +78,23 @@ function SpotifyLink({
       target="_blank"
       rel="noopener noreferrer"
       aria-label={`Listen to ${artistName} on Spotify (opens in a new tab)`}
-      className="inline-flex h-12 items-center rounded-full bg-black pr-5 text-sm font-semibold text-white outline-none transition-shadow hover:ring-1 hover:ring-white/40 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+      className="inline-flex justify-center gap-2 h-12 items-center rounded-full bg-black pl-3 pr-7 text-sm font-semibold text-white outline-none transition-shadow hover:ring-1 hover:ring-white/40 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-card"
       style={{
         fontFamily:
           "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
       }}
     >
-      <Image
-        src="/streaming/spotify-icon.svg"
-        alt=""
-        aria-hidden="true"
-        width={44}
-        height={44}
-        className="h-11 w-11 shrink-0"
-      />
+      <span className="h-8 w-8 overflow-hidden rounded-full flex items-center justify-center">
+        <Image
+          src="/streaming/spotify-icon.svg"
+          alt=""
+          aria-hidden="true"
+          width={44}
+          height={44}
+          className="h-11 w-11 shrink-0"
+        />
+      </span>
+
       <span>Listen on Spotify</span>
     </a>
   );
