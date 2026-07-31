@@ -621,6 +621,7 @@ function EventDetailsModal ({
   event,
   onClose,
 } : EventDetailsModalProps) {
+  const [isBioExpanded, setIsBioExpanded] = useState(false);
   // TEA-22: Last.fm artist biography.
   const [bio, setBio] = useState<FetchState<NormalizedArtistBio>>(
     initialFetchState,
@@ -722,7 +723,7 @@ function EventDetailsModal ({
         </div>
 
         {/* Content */}
-        <div className="space-y-4 p-6">
+        <div className="space-y-2 p-4">
           <div className="flex items-center gap-2 text-sm">
             <Calendar size={16} className="text-primary" />
             <span>{event.date}</span>
@@ -742,16 +743,19 @@ function EventDetailsModal ({
             </span>
           </div>
 
-          <div className="border-t border-border pt-4">
-            <p
-              className="text-xs uppercase text-muted-foreground"
-              style={{ fontFamily: "'DM Mono', monospace" }}
-            >
-              Price
-            </p>
+          {/* Conditional price section */}
+          {event.priceRange && (
+            <div className="border-t border-border pt-4">
+              <p
+                className="text-xs uppercase text-muted-foreground"
+                style={{ fontFamily: "'DM Mono', monospace" }}
+              >
+                Price
+              </p>
 
-            <p className="mt-1 font-semibold">{event.priceRange}</p>
-          </div>
+              <p className="mt-1 font-semibold">{event.priceRange}</p>
+            </div>
+          )}
 
           {/* TEA-22: Last.fm artist summary */}
           <div className="border-t border-border pt-4">
@@ -773,9 +777,22 @@ function EventDetailsModal ({
                 Bio unavailable right now.
               </p>
             ) : bio.data?.summary ? (
-              <p className="text-sm leading-6 text-muted-foreground">
-                {bio.data.summary}
-              </p>
+              <div>
+               <p 
+                className={`text-sm leading-6 text-muted-foreground ${
+                  isBioExpanded ? "" : "line-clamp-5"
+                }`}
+              >
+                  {bio.data.summary}
+               </p>
+
+               <button
+                 onClick={() => setIsBioExpanded((prev) => !prev)}
+                  className="mt-2 text-sm text-primary cursor-pointer"
+               >
+                  {isBioExpanded ? "Show less" : "Read more"}
+               </button>
+              </div>
             ) : (
               <p className="text-sm leading-6 text-muted-foreground">
                 No biography found for this artist.
@@ -810,7 +827,7 @@ function EventDetailsModal ({
               href={event.ticketUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground hover:opacity-90"
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground hover:opacity-90"
             >
               <Ticket size={16} />
               Get Tickets
