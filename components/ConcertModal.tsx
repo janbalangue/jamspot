@@ -7,7 +7,7 @@ import { X, MapPin, Calendar, Clock, Ticket } from "lucide-react";
 import type { NormalizedArtistBio } from "@/lib/lastfm";
 import type { NormalizedSpotifyArtist } from "@/lib/spotify";
 import type { NormalizedAppleMusicArtist } from "@/lib/apple-music";
-import StreamingServiceLinks from "@/components/StreamingServiceLinks";
+import StreamingServiceLinks from "./StreamingServiceLinks";
 
 /** Matches the CardEvent shape rendered by EventCard in app/page.tsx. */
 export type ConcertModalEvent = {
@@ -31,7 +31,7 @@ type FetchState<T> = {
   error: string | null;
 };
 
-const initialFetchState = <T,>(): FetchState<T> => ({
+export const initialFetchState = <T,>(): FetchState<T> => ({
   data: null,
   isLoading: true,
   error: null,
@@ -259,7 +259,7 @@ export default function ConcertModal({
 }
 
 
-async function fetchArtistData<T>(
+export async function fetchArtistData<T>(
   url: string,
   signal: AbortSignal
 ): Promise<T> {
@@ -271,7 +271,7 @@ async function fetchArtistData<T>(
   return data as T;
 }
 
-function errorState<T>(err: unknown): FetchState<T> {
+export function errorState<T>(err: unknown): FetchState<T> {
   const isAbort = err instanceof DOMException && err.name === "AbortError";
   return {
     data: null,

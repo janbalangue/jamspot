@@ -1,0 +1,30 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowJs": false,
+    "declaration": false,
+    "incremental": false,
+    "isolatedModules": false,
+    "jsx": "react-jsx",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "noEmit": false,
+    "outDir": ".ui-test-build",
+    "plugins": [],
+    "rootDir": ".",
+    "sourceMap": true,
+    "target": "ES2022",
+    "noCheck": true
+  },
+  "include": [
+    "app/page.tsx",
+    "components/ConcertModal.tsx",
+    "components/StreamingServiceLinks.tsx",
+    "tests/unit/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next",
+    ".ui-test-build"
+  ]
+}
