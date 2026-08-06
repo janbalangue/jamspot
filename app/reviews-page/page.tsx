@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ReviewCard from "@/components/ReviewCard";
+import ReviewCardSkeleton from "@/components/ReviewCardSkeleton";
 
 export const mockReviews = [
   {
@@ -78,24 +79,61 @@ export const mockReviews = [
 export default function ReviewsPage() {
     const [searchInput, setSearchInput] = useState("");
     const [search, setSearch] = useState("");
+    const [isLoading, setIsLoading] = useState(true);
+    const [reviews, setReviews] = useState<typeof mockReviews>([]);
+
+    useEffect(() => {
+        async function loadReviews() {
+            setIsLoading(true);
+
+            try {
+                // Temporary mock data Replace this with API call later
+                setReviews(mockReviews);
+            } catch (error) {
+                console.error("Failed to load reviews:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        }
+
+        loadReviews();
+    }, []);
 
     const filteredReviews = mockReviews.filter((review) => {
         const query = search.toLowerCase().trim();
 
         if (!query) return true;
 
-        const searchableText = [
-            review.artist,
-            review.venue,
-            review.city,
-            review.state,
-            `${review.city}, ${review.state}`,
-        ]
-            .join(" ")
-            .toLowerCase();
-
-        return searchableText.includes(query);
+        
     });
+
+    const handleSearch = async () => {
+        setIsLoading(true);
+
+        try {
+            const query = searchInput.toLowerCase().trim();
+
+            const filtered = mockReviews.filter((review) => {
+                const searchableText = [
+                    review.artist,
+                    review.venue,
+                    review.city,
+                    review.state,
+                    `${review.city}, ${review.state}`,
+                ]
+                    .join(" ")
+                    .toLowerCase();
+
+                return searchableText.includes(query);
+            });
+            setReviews(filtered);
+        } catch (error) {
+            console.error("Failed to search reviews:", error);
+            setReviews([]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     return (
         <main className="mx-auto max-w-3xl space-y-6 p-6 text-foreground">
@@ -109,7 +147,7 @@ export default function ReviewsPage() {
                     onChange={(e) => setSearchInput(e.target.value)}
                     onKeyDown={(e) => {
                         if (e.key === "Enter") {
-                            setSearch(searchInput);
+                            handleSearch();
                         }
                     }}
                     className=" 
@@ -124,16 +162,21 @@ export default function ReviewsPage() {
                     /> 
             </div>
 
+            {/* Reviews Cards */}
             <div className="space-y-4">
-                {filteredReviews.length > 0 ? (
-                    filteredReviews.map((review) => (
+                {isLoading ? (
+                    Array.from({ length: 3 }).map((_, index) => (
+                        <ReviewCardSkeleton key={index} />
+                    ))
+                ) : reviews.length > 0 ? (
+                    reviews.map((review) => (
                         <ReviewCard
                             key={review.id}
                             review={review}
                         />
                     ))
                 ) : (
-                    <p className="text-center text-gray-500">
+                    <p className="text-center text-review-muted">
                         No reviews found.
                     </p>
                 )}
