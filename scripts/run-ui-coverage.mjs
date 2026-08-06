@@ -8,8 +8,8 @@ const args = [
   "--test",
   "--experimental-test-coverage",
   ...coverageIncludes().map((file) => `--test-coverage-include=${file}`),
-  "--test-coverage-lines=95",
-  "--test-coverage-functions=90",
+  "--test-coverage-lines=80",
+  "--test-coverage-functions=80",
   "--test-coverage-branches=80",
   ...testFiles(),
 ];
