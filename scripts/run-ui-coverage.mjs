@@ -1,18 +1,17 @@
 import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 
+import { REQUIRE_FLAGS, coverageIncludes, testFiles } from "./ui-test-runner-lib.mjs";
+
 const args = [
-  "--require=./tests/unit/register-next-image-stub.cjs",
+  ...REQUIRE_FLAGS,
   "--test",
   "--experimental-test-coverage",
-  "--test-coverage-include=.ui-test-build/app/page.js",
-  "--test-coverage-include=.ui-test-build/components/ConcertModal.js",
-  "--test-coverage-include=.ui-test-build/components/StreamingServiceLinks.js",
+  ...coverageIncludes().map((file) => `--test-coverage-include=${file}`),
   "--test-coverage-lines=70",
   "--test-coverage-functions=70",
   "--test-coverage-branches=70",
-  ".ui-test-build/tests/unit/ui.test.js",
-  "tests/unit/home-hooks.test.cjs",
+  ...testFiles(),
 ];
 
 const result = spawnSync(process.execPath, args, {
