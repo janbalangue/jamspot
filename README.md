@@ -58,6 +58,7 @@ Current foundation work:
 * [ ] Ticketmaster API integrated
 * [ ] Recommendation logic implemented
 * [ ] Concert recommendation UI implemented
+* [x] UI unit tests and coverage reporting added
 * [ ] MVP testing completed
 
 ---
@@ -383,16 +384,16 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 
 ### GitHub
 
-The GitHub repository currently contains source code only.
+GitHub Actions runs UI tests with coverage before either deployment workflow can continue. The repository requires these Actions secrets for Vercel deployment:
 
-JamSpot does **not** currently require environment variables or secrets in GitHub because Vercel deploys directly from the connected Git repository.
+```text
+VERCEL_TOKEN
+VERCEL_ORG_ID
+VERCEL_PROJECT_ID
+VERCEL_PROJECT_ID_K7PZ
+```
 
-GitHub Actions secrets or variables should only be added later if GitHub Actions workflows need them for tasks such as:
-
-* Integration tests
-* Database tests
-* Builds requiring runtime configuration
-* Deployment scripts
+`VERCEL_PROJECT_ID` targets the subprod project. `VERCEL_PROJECT_ID_K7PZ` targets the production-preview project. Application runtime variables remain in Vercel rather than GitHub.
 
 ### Vercel
 
@@ -429,31 +430,24 @@ Vercel
 
 ## Vercel Deployment
 
-### 1. Push the Latest Code
+### 1. Open a Pull Request
 
-Before deploying, verify that the application builds:
+Before opening a pull request, run the same UI quality gate used by GitHub Actions:
 
 ```bash
 nvm use
-npm install
-npm run build
+npm ci
+npm run coverage
 ```
 
-Then check:
+Open pull requests against:
 
-```bash
-git status
+```text
+main → subprod deployment
+prod → production-preview deployment
 ```
 
-Commit and push the latest source code:
-
-```bash
-git add .
-git commit -m "Prepare JamSpot for deployment"
-git push origin main
-```
-
-Do not commit `.env.local`.
+Each deployment job depends on the `UI unit tests` job. A failed test or coverage threshold prevents the Vercel build, deployment, and alias steps from running. Do not commit `.env.local`.
 
 ### 2. Import JamSpot into Vercel
 
@@ -829,6 +823,43 @@ Add folders when the corresponding functionality is implemented rather than crea
 * [ ] Perform final MVP cleanup
 
 ---
+
+## Testing
+
+JamSpot includes UI unit tests built on Node.js's test runner and React server rendering. The tests cover concert formatting and filtering, the home page's UI state handlers, concert cards, modal states, streaming-service links, and artist-data error handling.
+
+Run the UI unit tests:
+
+```bash
+npm test
+```
+
+The explicit UI-only command is also available as `npm run test:ui`.
+
+Run the tests with enforced coverage thresholds and generate readable reports:
+
+```bash
+npm run coverage
+```
+
+The explicit command is also available as `npm run test:ui:coverage`.
+
+Coverage must remain at or above 70% for lines, branches, and functions. Reports are written to:
+
+```text
+coverage/ui-unit.txt
+coverage/ui-unit.html
+```
+
+Pull requests to `main` and `prod` run this coverage command before deployment. GitHub Actions uploads the generated `coverage/` directory as an artifact retained for 14 days. The deployment job has `needs: test`, so it cannot run unless the test job succeeds.
+
+To prevent merging around the workflow, configure a GitHub ruleset or branch protection rule for both `main` and `prod` and require the `UI unit tests` status check. The workflow gate blocks deployment; the repository rule blocks the merge itself.
+
+Run the browser end-to-end suite separately:
+
+```bash
+npm run test:e2e
+```
 
 ## Test Scenarios
 

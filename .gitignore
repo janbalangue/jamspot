@@ -49,3 +49,7 @@ yarn-error.log*
 next-env.d.ts
 
 .env*
+
+# UI unit-test build and coverage output
+.ui-test-build/
+coverage/

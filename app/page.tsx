@@ -11,12 +11,12 @@ import type { NormalizedConcert } from "@/lib/ticketmaster";
 import type { NormalizedArtistBio } from "@/lib/lastfm";
 import type { NormalizedSpotifyArtist } from "@/lib/spotify";
 import type { NormalizedAppleMusicArtist } from "@/lib/apple-music";
-import StreamingServiceLinks from "@/components/StreamingServiceLinks";
+import StreamingServiceLinks from "../components/StreamingServiceLinks";
 
 const FALLBACK_IMAGE = "https://picsum.photos/400/250?random=1";
 
 /** Shape the UI renders. Derived from the Ticketmaster API's normalized concert data. */
-type CardEvent = {
+export type CardEvent = {
   id: string;
   artist: string;
   venue: string;
@@ -30,7 +30,7 @@ type CardEvent = {
   ticketUrl: string | null;
 };
 
-function formatPriceRange(
+export function formatPriceRange(
   priceRange: NormalizedConcert["priceRange"],
 ): string | null {
   if (!priceRange) return null;
@@ -40,7 +40,7 @@ function formatPriceRange(
   return `${symbol}${min} - ${symbol}${max}`;
 }
 
-function formatDate(date: string | null | undefined): string {
+export function formatDate(date: string | null | undefined): string {
   if (!date) return "Date TBA";
 
   return new Intl.DateTimeFormat("en-US", {
@@ -50,7 +50,7 @@ function formatDate(date: string | null | undefined): string {
   }).format(new Date(date));
 }
 
-function formatTime(time: string | null | undefined): string {
+export function formatTime(time: string | null | undefined): string {
   if (!time) return "Time TBA";
 
   const [hours, minutes] = time.split(":").map(Number);
@@ -65,7 +65,7 @@ function formatTime(time: string | null | undefined): string {
   }).format(date)
 }
 
-function toCardEvent(concert: NormalizedConcert): CardEvent {
+export function toCardEvent(concert: NormalizedConcert): CardEvent {
   return {
     id: concert.id,
     artist: concert.artist ?? concert.name,
@@ -79,6 +79,37 @@ function toCardEvent(concert: NormalizedConcert): CardEvent {
     image: concert.imageUrl ?? FALLBACK_IMAGE,
     ticketUrl: concert.ticketUrl,
   };
+}
+
+export function filterCardEvents(
+  events: CardEvent[],
+  search: string,
+  location: string,
+  activeGenre: string,
+): CardEvent[] {
+  const query = search.trim().toLowerCase();
+  const normalizedLocation = location.trim().toLowerCase();
+
+  return events.filter((event) => {
+    const matchesGenre =
+      activeGenre === "All" || event.genre === activeGenre;
+    const searchableText = [
+      event.artist,
+      event.venue,
+      event.city,
+      event.state,
+      event.genre,
+    ]
+      .join(" ")
+      .toLowerCase();
+    const matchesSearch = !query || searchableText.includes(query);
+    const matchesLocation =
+      !normalizedLocation ||
+      event.city.toLowerCase().includes(normalizedLocation) ||
+      event.state.toLowerCase().includes(normalizedLocation);
+
+    return matchesGenre && matchesSearch && matchesLocation;
+  });
 }
 
 export default function Home() {
@@ -165,28 +196,10 @@ export default function Home() {
     ...new Set(events.map((e) => e.genre).filter(Boolean)),
   ];
 
-  const filtered = useMemo(() => {
-    return events.filter((e) => {
-      const matchGenre = activeGenre === "All" || e.genre === activeGenre;
-      const q = search.trim().toLowerCase();
-
-      const searchableText = [
-        e.artist,
-        e.venue,
-        e.city,
-        e.state,
-        e.genre,
-      ]
-        .join(' ')
-        .toLowerCase();
-
-      const matchSearch =
-        !q || searchableText.includes(q);
-      const loc = location.toLowerCase().trim();
-      const matchLocation = !loc || e.city.toLowerCase().includes(loc) || e.state.toLowerCase().includes(loc);
-      return matchGenre && matchLocation && matchSearch
-    })
-  }, [events, search, location, activeGenre])
+  const filtered = useMemo(
+    () => filterCardEvents(events, search, location, activeGenre),
+    [events, search, location, activeGenre],
+  );
 
   const currentYear = new Date().getFullYear();
 
@@ -504,7 +517,7 @@ export default function Home() {
   );
 }
 
-function EventCard({
+export function EventCard({
   event,
   onOpen,
   onTicketClick,
@@ -602,7 +615,7 @@ function EventCard({
   );
 }
 
-function EventCardSkeleton() {
+export function EventCardSkeleton() {
   return (
     <li className="overflow-hidden rounded-xl bg-card border border-border">
       {/* Image skeleton */}
@@ -644,7 +657,7 @@ const initialFetchState = <T,>(): FetchState<T> => ({
   error: null,
 });
 
-function EventDetailsModal ({
+export function EventDetailsModal ({
   event,
   onClose,
 } : EventDetailsModalProps) {
@@ -716,6 +729,8 @@ function EventDetailsModal ({
       >
         {/* Close */}
         <button
+          type="button"
+          aria-label="Close concert details"
           className="absolute right-3 top-3 z-10 rounded-full bg-black/50 p-2 text-white hover:bg-black/70 cursor-pointer"
           onClick={onClose}
         >
@@ -872,7 +887,7 @@ function EventDetailsModal ({
  * artist change, and writing state then would flash an empty result before the
  * replacement request lands.
  */
-function loadArtistData<Res, Data>(
+export function loadArtistData<Res, Data>(
   url: string,
   signal: AbortSignal,
   select: (res: Res) => Data | null,
@@ -893,7 +908,7 @@ function loadArtistData<Res, Data>(
     });
 }
 
-async function fetchArtistData<T>(url: string, signal: AbortSignal): Promise<T> {
+export async function fetchArtistData<T>(url: string, signal: AbortSignal): Promise<T> {
   const res = await fetch(url, { signal });
   const data = await res.json();
 
