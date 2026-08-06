@@ -6,7 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "npm run test:ui",
+    "coverage": "npm run test:ui:coverage",
+    "test:ui:build": "node -e \"require('fs').rmSync('.ui-test-build',{recursive:true,force:true})\" && tsc -p tsconfig.ui-tests.json",
+    "test:ui": "npm run test:ui:build && TZ=UTC node --require=./tests/unit/register-next-image-stub.cjs --test .ui-test-build/tests/unit/ui.test.js tests/unit/home-hooks.test.cjs",
+    "test:ui:coverage": "npm run test:ui:build && node scripts/run-ui-coverage.mjs",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.2",
@@ -16,12 +23,13 @@
     "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "eslint": "^10.8.0",
-    "eslint-config-next": "^0.2.4",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.2.12",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
