@@ -58,6 +58,25 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run UI tests with coverage
+        run: |
+          set -o pipefail
+          # Run tests with coverage, stream output to a log file so we can upload it even when tests fail.
+          # The exit code of the test command will be preserved by set -o pipefail.
+          npm run coverage 2>&1 | tee coverage/test-output.txt
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: subprod-ui-coverage-${{ github.event.pull_request.number }}
+          path: coverage/
+          if-no-files-found: ignore
+          retention-days: 14
+
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
 
