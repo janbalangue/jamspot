@@ -10,7 +10,7 @@
     "test": "npm run test:ui",
     "coverage": "npm run test:ui:coverage",
     "test:ui:build": "node -e \"require('fs').rmSync('.ui-test-build',{recursive:true,force:true})\" && tsc -p tsconfig.ui-tests.json",
-    "test:ui": "npm run test:ui:build && TZ=UTC node --require=./tests/unit/register-next-image-stub.cjs --test .ui-test-build/tests/unit/ui.test.js tests/unit/home-hooks.test.cjs",
+    "test:ui": "npm run test:ui:build && node scripts/run-ui-tests.mjs",
     "test:ui:coverage": "npm run test:ui:build && node scripts/run-ui-coverage.mjs",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
