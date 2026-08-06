@@ -3,6 +3,8 @@
 import { useState, useEffect, useMemo } from "react";
 
 import Image from "next/image";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Search, MapPin, Ticket, Music2, Calendar, Clock, X } from "lucide-react";
 
 import type { NormalizedConcert } from "@/lib/ticketmaster";
@@ -92,6 +94,9 @@ export default function Home() {
   const [selectedEvent, setSelectedEvent] = useState<CardEvent | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+
+
+  const pathname = usePathname();
 
   // Fetch concerts from our Ticketmaster-backed API route whenever a search
 
@@ -199,13 +204,17 @@ export default function Home() {
       event.image
   );
 
-  const handleLoadMore = () => {
+  const handleLoadMore = async () => {
     setIsLoadingMore(true);
 
-    setTimeout(() => {
+    try {
+      // Future API pagination here:
       setVisibleCount((prevCount) => prevCount + itemsPerLoad);
+    } catch (error) {
+      console.error("Failed to load more events:", error);
+    } finally {
       setIsLoadingMore(false);
-    }, 600)
+    }
   };
 
   const handleSearch = (e: React.SyntheticEvent<HTMLFormElement>) => {
@@ -263,15 +272,18 @@ export default function Home() {
       className="min-h-screen bg-background text-foreground"
       style={{ fontFamily: "'DM Sans', sans-serif" }}
     >
-      {/* Nav */}
+      {/* Navigation */}
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 flex items-center gap-6 h-16">
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
+
+          {/* Brand */}
+          <Link href="/" className="flex items-center gap-2 shrink-0">
+            <div className="flex w-7 h-7 rounded-md bg-primary flex items-center justify-center">
               <Music2 size={14} className="text-white" />
             </div>
+
             <span
-              className="text-sm font-bold tracking-widest text-foreground uppercase"
+              className="text-sm font-bold tracking-widest uppercase"
               style={{
                 fontFamily: "'Unbounded', sans-serif",
                 letterSpacing: "0.12em",
@@ -279,7 +291,21 @@ export default function Home() {
             >
               JAMSPOT
             </span>
-          </div>
+          </Link>
+
+          {/* Navigation */}
+          <nav className="flex items-center gap-6">
+            <Link 
+              href="/reviews-page"
+              className={`text-sm font-medium transition-colors ${
+                pathname === "/reviews-page"
+                  ? "text-primay"
+                  : "text-muted-foreground hover: text-primary"
+              }`}
+            >
+              Reviews
+            </Link>
+          </nav>
 
           {/* Search bar */}
           <form 
@@ -428,6 +454,7 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={handleLoadMore}
+                    disabled={isLoadingMore}
                     className="text-sm px-6 py-2.5 md:px-8 md:py-3 lg:px-10 rounded-full border bg-muted border-primary/40 text-foreground transition-all font-medium cursor-pointer hover:bg-primary hover:border-primary"
                   >
                     {isLoadingMore ? "Loading..." : "Show more"}
