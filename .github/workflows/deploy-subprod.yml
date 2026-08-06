@@ -28,6 +28,7 @@ jobs:
           set -o pipefail
           # Run tests with coverage, stream output to a log file so we can upload it even when tests fail.
           # The exit code of the test command will be preserved by set -o pipefail.
+          mkdir -p coverage
           npm run coverage 2>&1 | tee coverage/test-output.txt
 
       - name: Upload coverage report
