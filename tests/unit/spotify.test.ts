@@ -253,3 +253,49 @@ test("getSpotifyArtist falls back for a sparse artist", async () => {
     globalThis.fetch = originalFetch;
   }
 });
+
+test("getSpotifyArtist normalizes whitespace/casing in the artist name for the search request (TEA-30)", async () => {
+  const { getSpotifyArtist } = freshSpotifyModule();
+  const originalFetch = globalThis.fetch;
+  let searchUrl = "";
+  try {
+    await withEnv({ SPOTIFY_CLIENT_ID: "id", SPOTIFY_CLIENT_SECRET: "secret" }, async () => {
+      globalThis.fetch = async (url: RequestInfo | URL) => {
+        const urlStr = String(url);
+        if (urlStr.includes("token")) {
+          return jsonResponse({ access_token: "tok", token_type: "Bearer", expires_in: 3600 });
+        }
+        searchUrl = urlStr;
+        return jsonResponse({ artists: { items: [] } });
+      };
+      await getSpotifyArtist("  The STROKES  ");
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assert.match(searchUrl, /q=the\+strokes/);
+});
+
+test("getSpotifyArtist opts the search request into Next's Data Cache with the configured TTL (TEA-30)", async () => {
+  const { getSpotifyArtist } = freshSpotifyModule();
+  const originalFetch = globalThis.fetch;
+  let searchInit: RequestInit | undefined;
+  try {
+    await withEnv({ SPOTIFY_CLIENT_ID: "id", SPOTIFY_CLIENT_SECRET: "secret" }, async () => {
+      globalThis.fetch = async (url: RequestInfo | URL, init?: RequestInit) => {
+        const urlStr = String(url);
+        if (urlStr.includes("token")) {
+          return jsonResponse({ access_token: "tok", token_type: "Bearer", expires_in: 3600 });
+        }
+        searchInit = init;
+        return jsonResponse({ artists: { items: [] } });
+      };
+      await getSpotifyArtist("The Strokes");
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assert.deepEqual((searchInit as { next?: { revalidate?: number } })?.next, {
+    revalidate: 86_400,
+  });
+});

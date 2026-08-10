@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchConcerts, TicketmasterApiError } from "@/lib/ticketmaster";
+import { withCache } from "@/lib/api-cache";
 
 /**
  * GET /api/concerts?city=Dallas&stateCode=TX&startDateTime=...&endDateTime=...
@@ -43,14 +44,29 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const concerts = await searchConcerts({
-      city,
-      stateCode,
-      postalCode,
-      keyword,
-      startDateTime,
-      endDateTime,
-    });
+    // Cache key covers every param that affects the result set, so two
+    // searches only share a cache entry when they'd hit Ticketmaster the
+    // same way. withCache lowercases+trims this, so e.g. keyword casing
+    // doesn't cause a miss.
+    const cacheKey = new URLSearchParams();
+    if (city) cacheKey.set("city", city);
+    if (stateCode) cacheKey.set("stateCode", stateCode);
+    if (postalCode) cacheKey.set("postalCode", postalCode);
+    if (keyword) cacheKey.set("keyword", keyword);
+    if (startDateTime) cacheKey.set("startDateTime", startDateTime);
+    if (endDateTime) cacheKey.set("endDateTime", endDateTime);
+    cacheKey.sort();
+
+    const concerts = await withCache("ticketmaster", cacheKey.toString(), () =>
+      searchConcerts({
+        city,
+        stateCode,
+        postalCode,
+        keyword,
+        startDateTime,
+        endDateTime,
+      })
+    );
 
     return NextResponse.json({ concerts });
   } catch (err) {

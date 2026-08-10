@@ -219,3 +219,41 @@ test("searchConcerts handles a response with no events", async () => {
   }
   assert.deepEqual(result, []);
 });
+
+test("searchConcerts normalizes whitespace/casing in the keyword for the outgoing request (TEA-30)", async () => {
+  const originalFetch = globalThis.fetch;
+  let requestedUrl = "";
+  globalThis.fetch = async (url: RequestInfo | URL) => {
+    requestedUrl = String(url);
+    return jsonResponse({});
+  };
+  try {
+    await withEnv("TICKETMASTER_API_KEY", "key-123", async () => {
+      await searchConcerts({ keyword: "  JAZZ  " });
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assert.match(requestedUrl, /keyword=jazz/);
+});
+
+test("searchConcerts opts the request into Next's Data Cache with the configured (shorter) TTL (TEA-30)", async () => {
+  const originalFetch = globalThis.fetch;
+  let capturedInit: RequestInit | undefined;
+  globalThis.fetch = async (_url: RequestInfo | URL, init?: RequestInit) => {
+    capturedInit = init;
+    return jsonResponse({});
+  };
+  try {
+    await withEnv("TICKETMASTER_API_KEY", "key-123", async () => {
+      await searchConcerts({ keyword: "jazz" });
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  // Ticketmaster intentionally uses a shorter default (5 min) than the
+  // artist-data integrations (24h) - concert listings go stale faster.
+  assert.deepEqual((capturedInit as { next?: { revalidate?: number } })?.next, {
+    revalidate: 300,
+  });
+});

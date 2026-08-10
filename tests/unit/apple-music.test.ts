@@ -98,3 +98,35 @@ test("getAppleMusicArtist falls back when the url or genre is missing", async ()
     globalThis.fetch = originalFetch;
   }
 });
+
+test("getAppleMusicArtist normalizes whitespace/casing in the artist name for the search request (TEA-30)", async () => {
+  const originalFetch = globalThis.fetch;
+  let requestedUrl = "";
+  globalThis.fetch = async (url: RequestInfo | URL) => {
+    requestedUrl = String(url);
+    return jsonResponse({ results: [] });
+  };
+  try {
+    await getAppleMusicArtist("  Nova BLOOM  ");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assert.match(requestedUrl, /term=nova\+bloom/);
+});
+
+test("getAppleMusicArtist opts the search request into Next's Data Cache with the configured TTL (TEA-30)", async () => {
+  const originalFetch = globalThis.fetch;
+  let capturedInit: RequestInit | undefined;
+  globalThis.fetch = async (_url: RequestInfo | URL, init?: RequestInit) => {
+    capturedInit = init;
+    return jsonResponse({ results: [] });
+  };
+  try {
+    await getAppleMusicArtist("Nova Bloom");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assert.deepEqual((capturedInit as { next?: { revalidate?: number } })?.next, {
+    revalidate: 86_400,
+  });
+});

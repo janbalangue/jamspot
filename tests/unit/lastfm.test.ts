@@ -182,3 +182,39 @@ test("getArtistBio treats a whitespace-only bio and a non-numeric listener count
     globalThis.fetch = originalFetch;
   }
 });
+
+test("getArtistBio normalizes whitespace/casing in the artist name for the outgoing request (TEA-30)", async () => {
+  const originalFetch = globalThis.fetch;
+  let requestedUrl = "";
+  globalThis.fetch = async (url: RequestInfo | URL) => {
+    requestedUrl = String(url);
+    return jsonResponse({});
+  };
+  try {
+    await withEnv("LASTFM_API_KEY", "key-123", async () => {
+      await getArtistBio("  NoVa BLOOM  ");
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assert.match(requestedUrl, /artist=nova\+bloom/);
+});
+
+test("getArtistBio opts the request into Next's Data Cache with the configured TTL (TEA-30)", async () => {
+  const originalFetch = globalThis.fetch;
+  let capturedInit: RequestInit | undefined;
+  globalThis.fetch = async (_url: RequestInfo | URL, init?: RequestInit) => {
+    capturedInit = init;
+    return jsonResponse({});
+  };
+  try {
+    await withEnv("LASTFM_API_KEY", "key-123", async () => {
+      await getArtistBio("Nova Bloom");
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assert.deepEqual((capturedInit as { next?: { revalidate?: number } })?.next, {
+    revalidate: 86_400,
+  });
+});

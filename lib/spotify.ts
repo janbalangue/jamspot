@@ -1,3 +1,5 @@
+import { DEFAULT_API_CACHE_TTL_SECONDS, normalizeSearchValue } from "@/lib/cache-config";
+
 const SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token";
 const SPOTIFY_SEARCH_URL = "https://api.spotify.com/v1/search";
 
@@ -132,9 +134,12 @@ export async function getSpotifyArtist(
   artistName: string
 ): Promise<NormalizedSpotifyArtist | null> {
   const token = await getAccessToken();
+  // TEA-30: normalize so equivalent searches build the exact same request
+  // URL, and therefore share one Next.js Data Cache entry.
+  const normalizedArtistName = normalizeSearchValue(artistName);
 
   const searchParams = new URLSearchParams({
-    q: artistName,
+    q: normalizedArtistName,
     type: "artist",
     limit: "1",
   });
@@ -145,8 +150,9 @@ export async function getSpotifyArtist(
       `${SPOTIFY_SEARCH_URL}?${searchParams.toString()}`,
       {
         headers: { Authorization: `Bearer ${token}` },
-        // Artist metadata doesn't change minute to minute.
-        next: { revalidate: 86400 },
+        // Artist metadata doesn't change minute to minute. Cached for
+        // DEFAULT_API_CACHE_TTL_SECONDS (24h by default, configurable) - TEA-30.
+        next: { revalidate: DEFAULT_API_CACHE_TTL_SECONDS },
       }
     );
   } catch (err) {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAppleMusicArtist, AppleMusicApiError } from "@/lib/apple-music";
+import { withCache } from "@/lib/api-cache";
 
 /**
  * GET /api/artist/apple-music?name=Cher
@@ -22,7 +23,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const artist = await getAppleMusicArtist(name);
+    const artist = await withCache("apple-music", name, () => getAppleMusicArtist(name));
     return NextResponse.json({ artist });
   } catch (err) {
     if (err instanceof AppleMusicApiError) {

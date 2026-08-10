@@ -1,3 +1,5 @@
+import { DEFAULT_API_CACHE_TTL_SECONDS, normalizeSearchValue } from "@/lib/cache-config";
+
 const LASTFM_BASE_URL = "https://ws.audioscrobbler.com/2.0/";
 
 /** Clean, front-end-friendly shape we normalize the Last.fm response into. */
@@ -62,10 +64,13 @@ export async function getArtistBio(
   artistName: string
 ): Promise<NormalizedArtistBio | null> {
   const apiKey = getApiKey();
+  // TEA-30: normalize so "Cher", " cher ", "CHER" all build the exact same
+  // request URL, and therefore share one Next.js Data Cache entry.
+  const normalizedArtistName = normalizeSearchValue(artistName);
 
   const searchParams = new URLSearchParams({
     method: "artist.getinfo",
-    artist: artistName,
+    artist: normalizedArtistName,
     api_key: apiKey,
     format: "json",
     autocorrect: "1",
@@ -74,9 +79,9 @@ export async function getArtistBio(
   let response: Response;
   try {
     response = await fetch(`${LASTFM_BASE_URL}?${searchParams.toString()}`, {
-      // Bios don't change often - cache for a day to stay well within
-      // Last.fm's rate limit.
-      next: { revalidate: 86400 },
+      // Bios don't change often - cache for a day (configurable) to stay
+      // well within Last.fm's rate limit. TEA-30.
+      next: { revalidate: DEFAULT_API_CACHE_TTL_SECONDS },
     });
   } catch (err) {
     throw new LastfmApiError(

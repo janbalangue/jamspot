@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSpotifyArtist, SpotifyApiError } from "@/lib/spotify";
+import { withCache } from "@/lib/api-cache";
 
 /**
  * GET /api/artist/spotify?name=Cher
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const artist = await getSpotifyArtist(name);
+    const artist = await withCache("spotify", name, () => getSpotifyArtist(name));
     return NextResponse.json({ artist });
   } catch (err) {
     if (err instanceof SpotifyApiError) {
