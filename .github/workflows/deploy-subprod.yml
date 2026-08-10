@@ -92,20 +92,16 @@ jobs:
         run: npm install --global vercel@latest
 
       - name: Pull Vercel Environment Information
-        working-directory: apps/web
         run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }} --debug
 
       - name: Build Project Artifacts
-        working-directory: apps/web
         run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Deploy Project Artifacts to Vercel
         id: deploy
-        working-directory: apps/web
         run: |
           url=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
           echo "url=$url" >> "$GITHUB_OUTPUT"
 
       - name: Alias Deployment to jamspot-three.vercel.app
-        working-directory: apps/web
         run: vercel alias set "${{ steps.deploy.outputs.url }}" jamspot-three.vercel.app --token=${{ secrets.VERCEL_TOKEN }}
