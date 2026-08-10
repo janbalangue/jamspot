@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getArtistBio, LastfmApiError } from "@/lib/lastfm";
-import { withCache } from "@/lib/api-cache";
 
 /**
  * GET /api/artist/lastfm?name=Cher
@@ -20,7 +19,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const bio = await withCache("lastfm", name, () => getArtistBio(name));
+    const bio = await getArtistBio(name);
     return NextResponse.json({ bio });
   } catch (err) {
     if (err instanceof LastfmApiError) {
