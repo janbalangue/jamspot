@@ -6,8 +6,7 @@ All notable changes to JamSpot are documented in this file.
 
 ### Added
 
-- Shared, Supabase-backed cache for external API search results (Ticketmaster, Last.fm, Spotify, Apple Music), keyed by provider and normalized query, with a configurable 24-hour default TTL. (TEA-30)
-- `supabase/api_cache.sql` - SQL to create the `api_cache` table and its RLS policies; run manually in the Supabase SQL editor per environment.
+- Caching for external API search results (Ticketmaster, Last.fm, Spotify, Apple Music) via Next.js's built-in fetch/Data Cache, with a configurable default TTL (24h for artist data, 5min for Ticketmaster listings). No external database - `next: { revalidate }` is set on every provider fetch, and search values are normalized (trimmed + lowercased) before building the request so equivalent searches share one cache entry. (TEA-30)
 
 ## [0.1.0] - 2026-08-05
 
