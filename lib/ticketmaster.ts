@@ -1,3 +1,5 @@
+import { TICKETMASTER_CACHE_TTL_SECONDS, normalizeSearchValue } from "@/lib/cache-config";
+
 const TICKETMASTER_EVENTS_URL =
   "https://app.ticketmaster.com/discovery/v2/events.json";
 
@@ -137,7 +139,11 @@ export async function searchConcerts(
   if (params.city) searchParams.set("city", params.city);
   if (params.stateCode) searchParams.set("stateCode", params.stateCode);
   if (params.postalCode) searchParams.set("postalCode", params.postalCode);
-  if (params.keyword) searchParams.set("keyword", params.keyword);
+  // TEA-30: normalize free-text keyword so e.g. "Jazz" and "jazz " build
+  // the exact same request URL, and therefore share one Data Cache entry.
+  // city/stateCode/postalCode aren't touched here - the route already
+  // normalizes their casing consistently before calling searchConcerts.
+  if (params.keyword) searchParams.set("keyword", normalizeSearchValue(params.keyword));
   if (params.startDateTime)
     searchParams.set("startDateTime", params.startDateTime);
   if (params.endDateTime) searchParams.set("endDateTime", params.endDateTime);
@@ -148,9 +154,10 @@ export async function searchConcerts(
   try {
     response = await fetch(
       `${TICKETMASTER_EVENTS_URL}?${searchParams.toString()}`,
-      // Concert listings don't change minute to minute - cache briefly so
-      // we don't burn through Ticketmaster's rate limit.
-      { next: { revalidate: 300 } }
+      // Concert listings don't change minute to minute - cache briefly
+      // (configurable, default 5 min) so we don't burn through
+      // Ticketmaster's rate limit. TEA-30.
+      { next: { revalidate: TICKETMASTER_CACHE_TTL_SECONDS } }
     );
   } catch (err) {
     throw new TicketmasterApiError(

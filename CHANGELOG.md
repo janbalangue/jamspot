@@ -2,6 +2,12 @@
 
 All notable changes to JamSpot are documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- Caching for external API search results (Ticketmaster, Last.fm, Spotify, Apple Music) via Next.js's built-in fetch/Data Cache, with a configurable default TTL (24h for artist data, 5min for Ticketmaster listings). No external database - `next: { revalidate }` is set on every provider fetch, and search values are normalized (trimmed + lowercased) before building the request so equivalent searches share one cache entry. (TEA-30)
+
 ## [0.1.0] - 2026-08-05
 
 ### Added
