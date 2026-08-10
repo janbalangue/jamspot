@@ -1,4 +1,7 @@
 import { TICKETMASTER_CACHE_TTL_SECONDS, normalizeSearchValue } from "@/lib/cache-config";
+import type { NormalizedConcert } from "@jamspot/shared";
+
+export type { NormalizedConcert };
 
 const TICKETMASTER_EVENTS_URL =
   "https://app.ticketmaster.com/discovery/v2/events.json";
@@ -28,23 +31,6 @@ export type TicketmasterSearchParams = {
   page?: number;
   /** e.g. "date,asc" */
   sort?: string;
-};
-
-/** Clean, front-end-friendly shape we normalize every event into. */
-export type NormalizedConcert = {
-  id: string;
-  name: string;
-  artist: string | null;
-  venue: string | null;
-  city: string | null;
-  state: string | null;
-  date: string | null;
-  time: string | null;
-  imageUrl: string | null;
-  ticketUrl: string | null;
-  genre: string | null;
-  subGenre: string | null;
-  priceRange: { min: number; max: number; currency: string } | null;
 };
 
 export class TicketmasterApiError extends Error {

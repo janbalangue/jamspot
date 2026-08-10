@@ -1,20 +1,9 @@
 import { DEFAULT_API_CACHE_TTL_SECONDS, normalizeSearchValue } from "@/lib/cache-config";
+import type { NormalizedArtistBio } from "@jamspot/shared";
 
 const LASTFM_BASE_URL = "https://ws.audioscrobbler.com/2.0/";
 
-/** Clean, front-end-friendly shape we normalize the Last.fm response into. */
-export type NormalizedArtistBio = {
-  name: string;
-  /** Short bio with HTML stripped and the trailing "Read more on Last.fm"
-   *  link removed. Null if Last.fm has no bio on file for this artist. */
-  summary: string | null;
-  /** Full-length bio, same cleanup applied as `summary`. */
-  content: string | null;
-  /** Link to the artist's Last.fm page. */
-  url: string | null;
-  /** Last.fm's listener count for the artist, if available. */
-  listeners: number | null;
-};
+export type { NormalizedArtistBio };
 
 export class LastfmApiError extends Error {
   status?: number;

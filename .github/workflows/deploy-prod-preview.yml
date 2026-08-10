@@ -4,6 +4,11 @@ on:
   pull_request:
     branches:
       - prod
+    paths:
+      - apps/web/**
+      - package.json
+      - package-lock.json
+      - .github/workflows/deploy-prod-preview.yml
 
 permissions:
   contents: read
@@ -30,6 +35,7 @@ jobs:
         run: npm ci
 
       - name: Run UI tests with coverage
+        working-directory: apps/web
         run: npm run coverage
 
       - name: Upload coverage report
@@ -37,7 +43,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: prod-ui-coverage-${{ github.event.pull_request.number }}
-          path: coverage/
+          path: apps/web/coverage/
           if-no-files-found: error
           retention-days: 14
 
@@ -62,16 +68,20 @@ jobs:
         run: npm install --global vercel@latest
 
       - name: Pull Vercel Environment Information
+        working-directory: apps/web
         run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Build Project Artifacts
+        working-directory: apps/web
         run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Deploy Project Artifacts to Vercel
         id: deploy
+        working-directory: apps/web
         run: |
           url=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
           echo "url=$url" >> "$GITHUB_OUTPUT"
 
       - name: Alias Deployment to jamspot-k7pz.vercel.app
+        working-directory: apps/web
         run: vercel alias set "${{ steps.deploy.outputs.url }}" jamspot-k7pz.vercel.app --token=${{ secrets.VERCEL_TOKEN }}

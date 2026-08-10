@@ -1,4 +1,5 @@
 import { DEFAULT_API_CACHE_TTL_SECONDS, normalizeSearchValue } from "@/lib/cache-config";
+import type { NormalizedAppleMusicArtist } from "@jamspot/shared";
 
 const ITUNES_SEARCH_URL = "https://itunes.apple.com/search";
 
@@ -11,14 +12,7 @@ const ITUNES_SEARCH_URL = "https://itunes.apple.com/search";
  * need for the "link out to Apple Music" use case.
  */
 
-/** Clean, front-end-friendly shape we normalize the iTunes response into. */
-export type NormalizedAppleMusicArtist = {
-  id: number;
-  name: string;
-  /** Link to the artist's Apple Music page. */
-  url: string | null;
-  primaryGenre: string | null;
-};
+export type { NormalizedAppleMusicArtist };
 
 export class AppleMusicApiError extends Error {
   status?: number;
