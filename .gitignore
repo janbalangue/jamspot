@@ -1,7 +1,7 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -11,15 +11,15 @@
 !.yarn/versions
 
 # testing
-/coverage
-/test-results/
-/playwright-report/
-/blob-report/
-/playwright/.cache/
-/.ui-test-build/
+coverage
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+.ui-test-build/
 
 # next.js
-/.next/
+.next/
 /out/
 
 # production
@@ -50,6 +50,9 @@ next-env.d.ts
 
 .env*
 
-# UI unit-test build and coverage output
-.ui-test-build/
-coverage/
+# Expo (apps/mobile) - managed workflow, no native project folders committed
+.expo/
+apps/mobile/ios/
+apps/mobile/android/
+dist/
+expo-env.d.ts

@@ -22,23 +22,38 @@ The MVP will use Supabase for preference storage and the Ticketmaster Discovery 
 
 ## Tech Stack
 
-| Technology                 | Purpose                   |
-| -------------------------- | ------------------------- |
-| Next.js                    | Web application framework |
-| React                      | User interface            |
-| TypeScript                 | Application language      |
-| Tailwind CSS               | Styling                   |
-| Supabase                   | Backend platform          |
-| PostgreSQL                 | Database                  |
-| Ticketmaster Discovery API | Concert and event data    |
-| Vercel                     | Hosting and deployment    |
+| Technology                 | Purpose                                       |
+| -------------------------- | --------------------------------------------- |
+| Next.js                    | Web application framework                     |
+| React                      | User interface                                |
+| TypeScript                 | Application language                          |
+| Tailwind CSS               | Styling                                       |
+| Supabase                   | Backend platform                              |
+| PostgreSQL                 | Database                                      |
+| Ticketmaster Discovery API | Concert and event data                        |
+| Vercel                     | Hosting and deployment (web)                  |
+| Expo / React Native        | Mobile application (iOS/Android), in progress |
+| npm workspaces             | Monorepo tooling                              |
 
 Possible future integrations:
 
 * Claude API for natural-language preference input
 * Last.fm API for artist and music recommendations
 * Google authentication
-* Native mobile application
+
+## Monorepo Layout
+
+JamSpot is an npm-workspaces monorepo:
+
+* `apps/web` — the Next.js web app described throughout this README.
+* `apps/mobile` — the Expo/React Native app for iOS and Android (managed workflow, in progress).
+* `packages/shared` — TypeScript types shared between `apps/web` and `apps/mobile` for the normalized API response shapes.
+
+Run `npm install` once from the repo root to install every workspace's dependencies. Root-level
+convenience scripts delegate to the relevant workspace, e.g. `npm run dev:web`, `npm run
+dev:mobile`, `npm run build:web`, `npm run test:web`, `npm run test:e2e`, `npm run lint`. Each
+app's own scripts still work unchanged when run with that app as the working directory (e.g. `cd
+apps/web && npm run dev`).
 
 ## Current Project Status
 
@@ -60,6 +75,10 @@ Current foundation work:
 * [ ] Concert recommendation UI implemented
 * [x] UI unit tests and coverage reporting added
 * [ ] MVP testing completed
+* [x] Repo converted to an npm-workspaces monorepo (apps/web, apps/mobile, packages/shared)
+* [x] Expo mobile app scaffolded (managed workflow)
+* [ ] Mobile app UI implemented
+* [ ] Mobile CI / EAS Build pipeline set up
 
 ---
 
@@ -213,10 +232,8 @@ npm install
 Create:
 
 ```text
-.env.local
+apps/web/.env.local
 ```
-
-in the project root.
 
 Add:
 
@@ -244,13 +261,13 @@ These variables are not required until the corresponding integrations are implem
 Run:
 
 ```bash
-git check-ignore .env.local
+git check-ignore apps/web/.env.local
 ```
 
 Expected output:
 
 ```text
-.env.local
+apps/web/.env.local
 ```
 
 Also check:
@@ -259,11 +276,19 @@ Also check:
 git status
 ```
 
-`.env.local` should not appear as an untracked or staged file.
+`apps/web/.env.local` should not appear as an untracked or staged file.
 
 Never commit real API credentials or environment files containing credentials.
 
 ### 6. Start the Development Server
+
+From the repo root:
+
+```bash
+npm run dev:web
+```
+
+Or from `apps/web`:
 
 ```bash
 npm run dev
@@ -918,16 +943,16 @@ npm install
 
 ### Environment Variables Are Not Loading
 
-Confirm `.env.local` exists at the project root:
+Confirm `.env.local` exists in the web app directory:
 
 ```text
-jamspot/.env.local
+jamspot/apps/web/.env.local
 ```
 
 Then restart the development server:
 
 ```bash
-npm run dev
+npm run dev:web
 ```
 
 ### Supabase Query Fails
@@ -945,14 +970,14 @@ Check:
 
 ### Clear the Next.js Build Cache
 
-macOS or Linux:
+macOS or Linux (from `apps/web`):
 
 ```bash
 rm -rf .next
 npm run dev
 ```
 
-PowerShell:
+PowerShell (from `apps/web`):
 
 ```powershell
 Remove-Item -Recurse -Force .next
