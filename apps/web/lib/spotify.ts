@@ -1,19 +1,10 @@
 import { DEFAULT_API_CACHE_TTL_SECONDS, normalizeSearchValue } from "@/lib/cache-config";
+import type { NormalizedSpotifyArtist } from "@jamspot/shared";
 
 const SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token";
 const SPOTIFY_SEARCH_URL = "https://api.spotify.com/v1/search";
 
-/** Clean, front-end-friendly shape we normalize the Spotify response into. */
-export type NormalizedSpotifyArtist = {
-  id: string;
-  name: string;
-  /** Link to the artist's Spotify page. */
-  url: string | null;
-  imageUrl: string | null;
-  genres: string[];
-  followers: number | null;
-  popularity: number | null;
-};
+export type { NormalizedSpotifyArtist };
 
 export class SpotifyApiError extends Error {
   status?: number;

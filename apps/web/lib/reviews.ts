@@ -1,38 +1,7 @@
 import { supabase } from "@/lib/supabase";
+import type { Review, NewReview, ReviewUpdate } from "@jamspot/shared";
 
-/**
- * Row shape of the `reviews` table.
- *
- * There is no `user_id` / accounts table - JamSpot has no authentication.
- * `user_name` is a plain, manually-entered text field, not a foreign key.
- */
-export type Review = {
-  id: string;
-  musician: string;
-  venue: string;
-  concert_date: string; // ISO date, e.g. "2026-05-01"
-  review_text: string;
-  venue_city: string | null;
-  venue_state: string | null;
-  venue_country: string | null;
-  user_name: string | null;
-  created_at: string;
-};
-
-/** Fields needed to create a new review. */
-export type NewReview = {
-  musician: string;
-  venue: string;
-  concertDate: string;
-  reviewText: string;
-  venueCity?: string;
-  venueState?: string;
-  venueCountry?: string;
-  userName?: string;
-};
-
-/** Fields that can be changed on an existing review. All optional. */
-export type ReviewUpdate = Partial<NewReview>;
+export type { Review, NewReview, ReviewUpdate };
 
 export class ReviewsError extends Error {
   constructor(message: string) {
